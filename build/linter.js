@@ -545,13 +545,13 @@ let findLocation = (pointers, path) => {
     for (let point in pointers) {
         if(point === path) {
            location.start = {
-               "column": pointers[point].value.column,
-               "line": pointers[point].value.line
+               "column": pointers[point].value.column + 1,
+               "line": pointers[point].value.line + 1
            };
 
            location.end = {
-               "column": pointers[point].valueEnd.column,
-               "line": pointers[point].valueEnd.line,
+               "column": pointers[point].valueEnd.column + 1,
+               "line": pointers[point].valueEnd.line + 1,
            };
         };
     };
