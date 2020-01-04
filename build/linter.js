@@ -527,7 +527,7 @@ let rules = {
     },
     "text_several_h1": {
         "code": 'TEXT.SEVERAL_H1',
-        "error": 'Заголовок первого уровня (блок text с модификатором type h1) на странице должен быть единственным'
+        "error": 'Заголовок первого уровня (блок text с модификатором type h1) на странице должен быть единственным',
     },
     "text_h2_position": {
         "code": 'TEXT.INVALID_H2_POSITION',
@@ -538,7 +538,23 @@ let rules = {
         "error": 'Заголовок третьего уровня (блок text с модификатором type h3) не может находиться перед заголовком второго уровня на том же или более глубоком уровне вложенности'
     }
     // Тут еще будет что-то по гридам
-}
+};
+
+
+let firstText = (textSize, blockType, obj) => {
+  for (let el in obj) {
+    if(blockType === 'warning' && el === "content") {
+      if(textSize === null) {
+        if(obj[el][0].block  === "text") {
+          textSize = obj[el][0].mods.size;
+          // Нашли и вышли с нас хватит
+          break;
+        };
+      };
+    };
+  }
+  return textSize;
+};
 
 let findLocation = (pointers, path) => {
     let location =  {};
@@ -560,41 +576,88 @@ let findLocation = (pointers, path) => {
 };
 
 let search = (obj, err) => {
-    let titleCounter = 0;
-    let pointers = obj.pointers;
-    let object   = obj.data;
-    let text_several_h1;
+  let titleCounter = 0;
+  let pointers = obj.pointers;
+  let object   = obj.data;
+  let textSize = null;
+  let blockType;
+  let blockPath;
 
 
-    let iterate = (obj, map = "") => {
-        if (Array.isArray(obj)) {
-            obj.forEach((e, i) => {
-                iterate(e, `${map}/${i}`);
+  let iterate = (obj, map = "") => {
+      if (Array.isArray(obj)) {
+          obj.forEach((e, i) => {
+              iterate(e, `${map}/${i}`);
+          });
+          return;
+      };
+  
+    for (const el in obj) {
+
+      const path = `${map}/${el}`;
+
+      if (obj[el] === "warning") {
+          blockType = 'warning';
+          blockPath = path;
+      }
+  
+
+      if (el === "content") {
+        iterate(obj[el], path);
+      }
+
+
+      // Поиск первой записи в блоке warning
+      textSize = firstText(textSize, blockType, obj);
+ 
+
+      if(el === "mods" && obj[el].size ) {
+        if (textSize !== null) {
+          let location = findLocation(pointers,blockPath);
+          if (textSize !== obj[el].size) {
+            err.push({
+              code: rules.warning_text_size.code,
+              errors: rules.warning_text_size.error,
+              location: {
+                "start": { 
+                  "column": location.start.column,  
+                  "line" : location.end.line
+                }, 
+                "end" : {
+                  "column": location.end.column,
+                  "line": location.end.line
+                }
+              }
             });
-            return;
+          };
         };
-    
-        for (const el in obj) {
-            const path = `${map}/${el}`;
-            if (obj[el] === "warning") {
-                
-            }
-        
-            if (el === "content") {
-             iterate(obj[el], path);
-           
-            }
-            if (el === "mods" && obj[el].type === "h1") {
-                titleCounter++;
-                if(titleCounter > 1) {
-                    rules.text_several_h1.location = findLocation(pointers,path);
-                    text_several_h1 = rules.text_several_h1;
-                };
-            };
+      };
+
+      // Правила для текста
+      if (el === "mods" && obj[el].type === "h1") {
+        titleCounter++;
+        if (titleCounter > 1) {
+            let location = findLocation(pointers,path);
+            err.push({
+              code: rules.text_several_h1.code,
+              errors: rules.text_several_h1.error,
+              location: {
+                "start": { 
+                  "column": location.start.column,  
+                  "line" : location.end.line
+                }, 
+                "end" : {
+                  "column": location.end.column,
+                  "line": location.end.line
+                }
+              }
+            });
+          };
         };
+      };
     };
+
     iterate(object);
-    err.push(text_several_h1);
     return err;
 };
 
@@ -606,5 +669,5 @@ let linter = (str) => {
   return errors;
 };
 
-console.log(linter(str));
+console.log(linter(str))
 linter(str);
