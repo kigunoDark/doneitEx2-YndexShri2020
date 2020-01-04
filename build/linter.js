@@ -607,3 +607,4 @@ let linter = (str) => {
 };
 
 console.log(linter(str));
+linter(str);
