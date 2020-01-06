@@ -14,7 +14,7 @@ let escapedChars = {
 
 let A_CODE = 'a'.charCodeAt();
 
-parse = (source, _, options) => {
+let parse = (source, _, options) => {
   let pointers = {};
   let line = 0;
   let column = 0;
@@ -503,7 +503,7 @@ let traverse = ( obj, link , errsList = {}) => {
   };
   
   
-let linter = (str) => {
+let lint = (str) => {
     const obj = parse(str);
     this.errors = [];
     this.pnt = obj.pointers;
