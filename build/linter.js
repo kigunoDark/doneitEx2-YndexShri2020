@@ -1,45 +1,4 @@
-// I WISH TO SEE COMPLETE INFO
-require("util").inspect.defaultOptions.depth = null;
-
-// TEST DATA
-const str = `{
-    "block": "warning",
-    "content": [
-        {
-            "block": "placeholder",
-            "mods": { "size": "m" }
-        },
-        {
-            "block": "text",
-            "mods": { "type": "h1" }
-        }, 
-        {
-            "block": "text",
-            "mods": { "type": "h1" }
-        },   
-        {
-            "block": "text",
-            "mods": { "type": "h1" }
-        },   
-        {
-            "elem": "content",
-            "content": [
-                {
-                    "block": "text",
-                    "mods": { "size": "m" }
-                },
-                {
-                    "block": "text",
-                    "mods": { "size": "l" }
-                }
-            ]
-        }
-    ]
-    }`;
-  
-
 // JSON-SOURCE-MAP
-
 'use strict';
 
 let escapedChars = {
@@ -54,7 +13,6 @@ let escapedChars = {
 };
 
 let A_CODE = 'a'.charCodeAt();
-
 
 parse = (source, _, options) => {
   let pointers = {};
@@ -276,228 +234,6 @@ parse = (source, _, options) => {
   }
 };
 
-
-exports.stringify = function (data, _, options) {
-  if (!validType(data)) return;
-  let wsLine = 0;
-  let wsPos, wsColumn;
-  let whitespace = typeof options == 'object'
-                    ? options.space
-                    : options;
-  switch (typeof whitespace) {
-    case 'number':
-      let len = whitespace > 10
-                  ? 10
-                  : whitespace < 0
-                    ? 0
-                    : Math.floor(whitespace);
-      whitespace = len && repeat(len, ' ');
-      wsPos = len;
-      wsColumn = len;
-      break;
-    case 'string':
-      whitespace = whitespace.slice(0, 10);
-      wsPos = 0;
-      wsColumn = 0;
-      for (let j=0; j<whitespace.length; j++) {
-        let char = whitespace[j];
-        switch (char) {
-          case ' ': wsColumn++; break;
-          case '\t': wsColumn += 4; break;
-          case '\r': wsColumn = 0; break;
-          case '\n': wsColumn = 0; wsLine++; break;
-          default: throw new Error('whitespace characters not allowed in JSON');
-        }
-        wsPos++;
-      }
-      break;
-    default:
-      whitespace = undefined;
-  }
-
-  let json = '';
-  let pointers = {};
-  let line = 0;
-  let column = 0;
-  let pos = 0;
-  let es6 = options && options.es6 && typeof Map == 'function';
-  _stringify(data, 0, '');
-  return {
-    json: json,
-    pointers: pointers
-  };
-
-  function _stringify(_data, lvl, ptr) {
-    map(ptr, 'value');
-    switch (typeof _data) {
-      case 'number':
-      case 'bigint':
-      case 'boolean':
-        out('' + _data); break;
-      case 'string':
-        out(quoted(_data)); break;
-      case 'object':
-        if (_data === null) {
-          out('null');
-        } else if (typeof _data.toJSON == 'function') {
-          out(quoted(_data.toJSON()));
-        } else if (Array.isArray(_data)) {
-          stringifyArray();
-        } else if (es6) {
-          if (_data.constructor.BYTES_PER_ELEMENT)
-            stringifyArray();
-          else if (_data instanceof Map)
-            stringifyMapSet();
-          else if (_data instanceof Set)
-            stringifyMapSet(true);
-          else
-            stringifyObject();
-        } else {
-          stringifyObject();
-        }
-    }
-    map(ptr, 'valueEnd');
-
-    function stringifyArray() {
-      if (_data.length) {
-        out('[');
-        let itemLvl = lvl + 1;
-        for (let i=0; i<_data.length; i++) {
-          if (i) out(',');
-          indent(itemLvl);
-          let item = validType(_data[i]) ? _data[i] : null;
-          let itemPtr = ptr + '/' + i;
-          _stringify(item, itemLvl, itemPtr);
-        }
-        indent(lvl);
-        out(']');
-      } else {
-        out('[]');
-      }
-    }
-
-    function stringifyObject() {
-      let keys = Object.keys(_data);
-      if (keys.length) {
-        out('{');
-        let propLvl = lvl + 1;
-        for (let i=0; i<keys.length; i++) {
-          let key = keys[i];
-          let value = _data[key];
-          if (validType(value)) {
-            if (i) out(',');
-            let propPtr = ptr + '/' + escapeJsonPointer(key);
-            indent(propLvl);
-            map(propPtr, 'key');
-            out(quoted(key));
-            map(propPtr, 'keyEnd');
-            out(':');
-            if (whitespace) out(' ');
-            _stringify(value, propLvl, propPtr);
-          }
-        }
-        indent(lvl);
-        out('}');
-      } else {
-        out('{}');
-      }
-    }
-
-    function stringifyMapSet(isSet) {
-      if (_data.size) {
-        out('{');
-        let propLvl = lvl + 1;
-        let first = true;
-        let entries = _data.entries();
-        let entry = entries.next();
-        while (!entry.done) {
-          let item = entry.value;
-          let key = item[0];
-          let value = isSet ? true : item[1];
-          if (validType(value)) {
-            if (!first) out(',');
-            first = false;
-            let propPtr = ptr + '/' + escapeJsonPointer(key);
-            indent(propLvl);
-            map(propPtr, 'key');
-            out(quoted(key));
-            map(propPtr, 'keyEnd');
-            out(':');
-            if (whitespace) out(' ');
-            _stringify(value, propLvl, propPtr);
-          }
-          entry = entries.next();
-        }
-        indent(lvl);
-        out('}');
-      } else {
-        out('{}');
-      }
-    }
-  }
-
-  function out(str) {
-    column += str.length;
-    pos += str.length;
-    json += str;
-  }
-
-  function indent(lvl) {
-    if (whitespace) {
-      json += '\n' + repeat(lvl, whitespace);
-      line++;
-      column = 0;
-      while (lvl--) {
-        if (wsLine) {
-          line += wsLine;
-          column = wsColumn;
-        } else {
-          column += wsColumn;
-        }
-        pos += wsPos;
-      }
-      pos += 1; // \n character
-    }
-  }
-
-  function map(ptr, prop) {
-    pointers[ptr] = pointers[ptr] || {};
-    pointers[ptr][prop] = {
-      line: line +1,
-      column: column +1,
-    };
-  }
-
-  function repeat(n, str) {
-    return Array(n + 1).join(str);
-  }
-};
-
-
-let VALID_TYPES = ['number', 'bigint', 'boolean', 'string', 'object'];
-function validType(data) {
-  return VALID_TYPES.indexOf(typeof data) >= 0;
-}
-
-
-let ESC_QUOTE = /"|\\/g;
-let ESC_B = /[\b]/g;
-let ESC_F = /\f/g;
-let ESC_N = /\n/g;
-let ESC_R = /\r/g;
-let ESC_T = /\t/g;
-
-function quoted(str) {
-  str = str.replace(ESC_QUOTE, '\\$&')
-           .replace(ESC_F, '\\f')
-           .replace(ESC_B, '\\b')
-           .replace(ESC_N, '\\n')
-           .replace(ESC_R, '\\r')
-           .replace(ESC_T, '\\t');
-  return '"' + str + '"';
-}
-
-
 let ESC_0 = /~/g;
 let ESC_1 = /\//g;
 function escapeJsonPointer(str) {
@@ -506,168 +242,274 @@ function escapeJsonPointer(str) {
 }
 
 
-// THIS IS MY PART OF CODE
+//   MY PART OF CODE
+  
+  const size = [
+    "xxxs",
+    "xxs",
+    "xs",
+    "s",
+    "m",
+    "l",
+    "xl",
+    "xxl",
+    "xxxl",
+    "xxxxl",
+    "xxxxxl"
+  ];
+  
 
-let rules = {
-    "warning_text_size": {
-        "code": 'WARNING.TEXT_SIZES_SHOULD_BE_EQUAL',
-        "error": 'Тексты в блоке warning должны быть одного размера'
-    },
-    "warning_button_size": {
-        "code": 'WARNING.INVALID_BUTTON_SIZE',
-        "error": "Размер кнопки блока warning должен быть на 1 шаг больше эталонного (например, для размера l таким значением будет xl)"
-    },
-    "warning_button_place": {
-        "code": 'WARNING.INVALID_BUTTON_POSITION',
-        "error": 'Блок button в блоке warning не может находиться перед блоком placeholder на том же или более глубоком уровне вложенности'
-    },
-    "warning_placeholder_size": {
-        "code": 'WARNING.INVALID_PLACEHOLDER_SIZE',
-        "error": 'Допустимые размеры для блока placeholder в блоке warning (значение модификатора size): s, m, l'
-    },
-    "text_several_h1": {
-        "code": 'TEXT.SEVERAL_H1',
-        "error": 'Заголовок первого уровня (блок text с модификатором type h1) на странице должен быть единственным',
-    },
-    "text_h2_position": {
-        "code": 'TEXT.INVALID_H2_POSITION',
-        "error": 'Заголовок второго уровня (блок text с модификатором type h2) не может находиться перед заголовком первого уровня на том же или более глубоком уровне вложенности'
-    },
-    "text_h3_position": {
-        "code": 'TEXT.INVALID_H3_POSITION',
-        "error": 'Заголовок третьего уровня (блок text с модификатором type h3) не может находиться перед заголовком второго уровня на том же или более глубоком уровне вложенности'
-    }
-    // Тут еще будет что-то по гридам
+  
+const addError = (data, obj, link) => {
+    data.errors.push({
+        code: obj.code,
+        error: obj.error,
+        location: {
+            start: {
+                column: data.pnt[link].value.column,
+                line: data.pnt[link].value.line
+            },
+            end: {
+                column: data.pnt[link].valueEnd.column,
+                line: data.pnt[link].valueEnd.line
+            }
+        }
+    });
 };
 
-
-let firstText = (textSize, blockType, obj) => {
-  for (let el in obj) {
-    if(blockType === 'warning' && el === "content") {
-      if(textSize === null) {
-        if(obj[el][0].block  === "text") {
-          textSize = obj[el][0].mods.size;
-          // Нашли и вышли с нас хватит
-          break;
-        };
-      };
-    };
-  }
-  return textSize;
-};
-
-let findLocation = (pointers, path) => {
-    let location =  {};
-    for (let point in pointers) {
-        if(point === path) {
-           location.start = {
-               "column": pointers[point].value.column + 1,
-               "line": pointers[point].value.line + 1
-           };
-
-           location.end = {
-               "column": pointers[point].valueEnd.column + 1,
-               "line": pointers[point].valueEnd.line + 1,
-           };
-        };
+function ErrorsTitle() {
+   
+    this.titleH1 = {
+      code: "TEXT.SEVERAL_H1",
+      error: "Заголовок первого уровня (блок text с модификатором type h1)" +
+             "на странице должен быть единственным"
     };
 
-   return location;
-};
+    this.titleH2 = {
+      code: "TEXT.INVALID_H2_POSITION",
+      error: "Заголовок второго уровня (блок text с модификатором type h2)" + 
+             "не может находиться перед заголовком первого уровня на том же или более глубоком уровне вложенности",
+      location: []
+    };
 
-let search = (obj, err) => {
-  let titleCounter = 0;
-  let pointers = obj.pointers;
-  let object   = obj.data;
-  let textSize = null;
-  let blockType;
-  let blockPath;
+    this.titleH3 = {
+      code: "TEXT.INVALID_H3_POSITION",
+      error: "Заголовок третьего уровня (блок text с модификатором type h3)" +
+             "не может находиться перед заголовком второго уровня на том же или более глубоком" +
+             "Sуровне вложенности",
+      location: []
+    };
 
+    this.counter = 0;
 
-  let iterate = (obj, map = "") => {
-      if (Array.isArray(obj)) {
-          obj.forEach((e, i) => {
-              iterate(e, `${map}/${i}`);
+  this.errorDist = function(obj, errsList, link) {
+
+    if (obj.block !== "text" || !obj.mods) return;
+    switch (obj.mods.type) {
+      case "h1":
+        if (errsList.counter > 0) {
+          addError(this, errsList.titleH1, link);
+        };
+        errsList.counter++;
+
+        if (errsList.titleH2.location.length > 0) {
+          errsList.titleH2.location.forEach(e => {
+            addError(this, errsList.titleH2, e);
           });
-          return;
-      };
-  
-    for (const el in obj) {
-
-      const path = `${map}/${el}`;
-
-      if (obj[el] === "warning") {
-          blockType = 'warning';
-          blockPath = path;
-      }
-  
-
-      if (el === "content") {
-        iterate(obj[el], path);
-      }
-
-
-      // Поиск первой записи в блоке warning
-      textSize = firstText(textSize, blockType, obj);
- 
-
-      if(el === "mods" && obj[el].size ) {
-        if (textSize !== null) {
-          let location = findLocation(pointers,blockPath);
-          if (textSize !== obj[el].size) {
-            err.push({
-              code: rules.warning_text_size.code,
-              errors: rules.warning_text_size.error,
-              location: {
-                "start": { 
-                  "column": location.start.column,  
-                  "line" : location.end.line
-                }, 
-                "end" : {
-                  "column": location.end.column,
-                  "line": location.end.line
-                }
-              }
-            });
-          };
+          errsList.titleH2.location.length = 0;
         };
-      };
+        break;
 
-      // Правила для текста
-      if (el === "mods" && obj[el].type === "h1") {
-        titleCounter++;
-        if (titleCounter > 1) {
-            let location = findLocation(pointers,path);
-            err.push({
-              code: rules.text_several_h1.code,
-              errors: rules.text_several_h1.error,
-              location: {
-                "start": { 
-                  "column": location.start.column,  
-                  "line" : location.end.line
-                }, 
-                "end" : {
-                  "column": location.end.column,
-                  "line": location.end.line
-                }
-              }
-            });
-          };
+      case "h2":
+        errsList.titleH2.location.push(link);
+
+        if (errsList.titleH3.location.length > 0) {
+          errsList.titleH3.location.forEach(e => {
+            addError(this, errsList.titleH3, e);
+          });
+          errsList.titleH3.location.length = 0;
         };
-      };
+        break;
+
+      case "h3":
+        errsList.titleH3.location.push(link);
+        break;
+    };
+  };
+};
+  
+  
+function ErrorsGrid(obj) {
+
+    this.code = "GRID.TOO_MUCH_MARKETING_BLOCKS";
+    this.error = "Слишком много макркетинговых блоков в Grid";
+    this.counter = 0;
+    this.max = obj.max;
+    this.market = 0;
+    this.link = obj.link;
+
+    this.errorDist = function (obj, errsList) {
+    switch (obj.block) {
+        case "offer":
+        case "commercial":
+        errsList.market += errsList.counter;
+        if (errsList.max / 2 < errsList.market) {
+          addError(this, errsList, errsList.link);
+        };
+        break;
+    };
+  };
+
+};
+  
+function WarningErrors(link) {
+    
+    this.txtSize = {
+        code: "WARNING.TEXT_SIZES_SHOULD_BE_EQUAL",
+        mods: { size: "none" },
+        error: "Все тексты (блоки text) в блоке warning должны быть одного размера",
+        appropriate: true
+    };
+  
+    this.btnSize = {
+        code: "WARNING.INVALID_BUTTON_SIZE",
+        error: "Размер кнопки блока warning должен быть на 1 шаг больше текста" + 
+               "(например, для размера l таким значением будет xl)",
+        mods: { size: "none" },
+        location: []
     };
 
-    iterate(object);
-    return err;
+    this.plhSize = {
+        code: "WARNING.INVALID_PLACEHOLDER_SIZE",
+        error: "Допустимые размеры для блока placeholder в блоке warning " +
+               "(значение модификатора size): s, m, l",
+        mods: { size: ["s", "m", "l"] }
+    };
+
+    this.plhPosition = {
+        code: "WARNING.INVALID_BUTTON_POSITION",
+        error: "Блок button в блоке warning не может находиться перед блоком placeholder" +
+               "на том же или более глубоком уровне вложенности"
+    };
+
+    this.location = link;  
+
+    this.errorDist = function (obj, errsList, link) {
+     switch(obj.block) {
+         case "text":
+            if (errsList.txtSize.mods.size === "none") {
+                const buttonSize = size[size.indexOf(obj.mods.size) + 1];
+                errsList.txtSize.mods.size = obj.mods.size;
+                errsList.btnSize.mods.size = buttonSize;
+              return;
+            };
+        
+            if (errsList.txtSize.mods.size !== obj.mods.size && errsList.txtSize.appropriate) {
+                addError(this, errsList.txtSize, errsList.location);
+                errsList.txtSize.appropriate = false;
+            };
+         break;
+
+         case "button":
+            errsList.btnSize.location.push(link);
+  
+            if (!obj.mods) return;
+      
+            if (errsList.btnSize.mods.size === "none") {
+              errsList.btnSize.location.push({ size: obj.mods.size, link });
+              return;
+            };
+
+            if (errsList.btnSize.mods.size !== obj.mods.size) addError(this, errsList.btnSize, link);
+
+         break;
+
+         case "placeholder":
+            if (errsList.btnSize.location.length > 0) {
+                errsList.btnSize.location.forEach(e => {
+                  addError(this, errsList.plhPosition, e);
+                });
+                errsList.btnSize.location.length = 0;
+              };
+        
+              if (!obj.mods) return;
+        
+              if (!errsList.plhSize.mods.size.includes(obj.mods.size)) {
+                addError(this, errsList.plhSize, link);
+              };
+         break;
+     };
+      
+  
+    };
 };
 
+const RulesFactory = (obj,  errsList, link) => {
+    switch (obj.block) {
+        case "warning":
+            if(!obj.elem) errsList.warning = new WarningErrors(link);
+        break;
+        
+        case "page":
+            if(!obj.elem) errsList.title= new ErrorsTitle();
+        break;
 
+        case "grid":
+            if(obj.mods) {
+              errsList.grid = new ErrorsGrid({ link , max: parseInt(obj.mods["m-columns"]) });
+            } 
+            if(obj.elemMods) errsList.grid.counter = parseInt(obj.elemMods["m-col"]);
+        break;
+    };
+}
+  
+let traverse = ( obj, link , errsList = {}) => {
+    errsList = { ...errsList };
+    if (Array.isArray(obj)) {
+      obj.forEach((e, i) => {
+        traverse(e, `${link}/${i}`, errsList);
+      });
+      return;
+    };
+  
+    RulesFactory(obj, errsList, link);
+    
+    if (obj.content && Array.isArray(obj.content)) {
+      const reloadLink   = `${link}/content`;
+      traverse(obj.content, reloadLink, errsList);
+      return;
+    };
+  
+    if (typeof obj.content === "object" && obj.content !== null) {
+      const reloadLink = `${link}/content`;
+      traverse(obj.content, reloadLink, errsList);
+      return;
+    };
+
+    for(let rule in errsList){
+      switch(rule) {
+        case "warning":
+          errsList.warning.errorDist.call(this, obj,errsList.warning, link);
+        break;
+        case "title":
+          errsList.title.errorDist.call(this, obj, errsList.title, link);
+        break;
+        case "grid":
+          errsList.grid.errorDist.call(this, obj, errsList.grid, link);
+        break;
+      }
+    }
+   
+  };
+  
+  
 let linter = (str) => {
-  let errors = [];
-  const obj = parse(str);
-  errors = search(obj, errors)
-  return errors;
-};
+    const obj = parse(str);
+    this.errors = [];
+    this.pnt = obj.pointers;
 
-console.log(linter(str))
-linter(str);
+    const link = "";
+    traverse.call(this, obj.data, link); 
+    return this.errors;
+};
+  
