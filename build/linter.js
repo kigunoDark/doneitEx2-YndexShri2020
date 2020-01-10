@@ -168,7 +168,7 @@ let parse = (source, _, options) => {
     checkUnexpectedEnd();
     let char = source[pos];
     pos++;
-    column++; // new line?
+    column++; 
     return char;
   }
 
