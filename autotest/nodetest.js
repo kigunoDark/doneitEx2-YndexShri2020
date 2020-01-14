@@ -495,7 +495,7 @@ const traverse = (obj, link, errsList = {}) => {
 };
   
   
-const lint = (str) => {
+exports.lint = (str) => {
   const obj = parse(str);
 
   this.errors = [];

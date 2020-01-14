@@ -1,0 +1,32 @@
+{
+  "name": "finishex2",
+  "version": "1.0.0",
+  "description": "",
+  "main": "myTest.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kigunoDark/doneitEx2.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kigunoDark/doneitEx2/issues"
+  },
+  "homepage": "https://github.com/kigunoDark/doneitEx2#readme",
+  "devDependencies": {
+    "eslint": "^6.1.0",
+    "eslint-config-airbnb-base": "^14.0.0",
+    "eslint-config-prettier": "^6.9.0",
+    "eslint-plugin-import": "^2.18.2",
+    "eslint-plugin-prettier": "^3.1.2",
+    "jest": "^24.9.0",
+    "prettier": "^1.19.1"
+  },
+  "dependencies": {
+    "eslint-plugin-jest": "^23.6.0"
+  }
+}
